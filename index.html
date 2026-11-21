@@ -169,13 +169,22 @@
 
     // Lys
     el("rect", { x: cx - W/2, y: top, width: W, height: h - 12, rx: 3, fill: "url(#wax)" }, g);
-    el("ellipse", { cx, cy: top, rx: W/2, ry: 5, fill: "var(--candle)" }, g);
+    const untouched = i >= lit; // lys som ikke er tent ennå har spiss topp og hvit veke
+    if (untouched) {
+      el("path", { d: `M${cx - W/2} ${top} Q ${cx - W/2 + 3} ${top - 9} ${cx} ${top - 16} Q ${cx + W/2 - 3} ${top - 9} ${cx + W/2} ${top} Z`, fill: "url(#wax)" }, g);
+    } else {
+      el("ellipse", { cx, cy: top, rx: W/2, ry: 5, fill: "var(--candle)" }, g);
+    }
     // Voksdrypp på lys som har brent
     if (i < lit) {
       el("path", { d: `M${cx - W/2 + 8} ${top} q 2 22 6 24 q 3 -2 2 -24 z`, fill: "#b98ad6", opacity: .8 }, g);
     }
     // Veke
-    el("line", { x1: cx, y1: top, x2: cx, y2: top - 12, stroke: "#222", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+    if (untouched) {
+      el("line", { x1: cx, y1: top - 15, x2: cx, y2: top - 24, stroke: "#f5f1e6", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+    } else {
+      el("line", { x1: cx, y1: top, x2: cx, y2: top - 12, stroke: "#222", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+    }
 
     if (isLit) {
       const fy = top - 12;
