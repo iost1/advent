@@ -12,8 +12,8 @@
     --muted: #b9b09a;
     --wood: #5a3a22;
     --wood-dark: #3b2414;
-    --candle: #f1e7cf;
-    --candle-shade: #d8c9a6;
+    --candle: #8a4bb0;
+    --candle-shade: #5e2d80;
     --green: #1f5a3a;
   }
   * { box-sizing: border-box; }
@@ -131,6 +131,7 @@
     }
   })();
 
+  function render() {
   const t = now();
   const year = t.getFullYear();
   const adv = adventDates(year);
@@ -154,6 +155,7 @@
   if (christmas) burntOut.forEach(i => heights[i] = STUB_H);
 
   const cg = document.getElementById("candles");
+  cg.textContent = ""; // fjern forrige tegning så lysene ikke hoper seg opp
   CANDLE_X.forEach((cx, i) => {
     const out = burntOut.includes(i);
     const isLit = i < lit && !out;
@@ -170,7 +172,7 @@
     el("ellipse", { cx, cy: top, rx: W/2, ry: 5, fill: "var(--candle)" }, g);
     // Voksdrypp på lys som har brent
     if (i < lit) {
-      el("path", { d: `M${cx - W/2 + 8} ${top} q 2 22 6 24 q 3 -2 2 -24 z`, fill: "#fffaf0", opacity: .85 }, g);
+      el("path", { d: `M${cx - W/2 + 8} ${top} q 2 22 6 24 q 3 -2 2 -24 z`, fill: "#b98ad6", opacity: .8 }, g);
     }
     // Veke
     el("line", { x1: cx, y1: top, x2: cx, y2: top - 12, stroke: "#222", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
@@ -210,6 +212,11 @@
       sub.textContent = "Julen ringes inn 24. desember kl. 17.00 – da brenner det første lyset ut.";
     }
   }
+  }
+
+  render();
+  // Oppdater jevnlig, men la ?dato= stå fast som forhåndsvisning.
+  if (!new URLSearchParams(location.search).get("dato")) setInterval(render, 60000);
 })();
 </script>
 </body>
