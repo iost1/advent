@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adventsstake</title>
+<style>
+  :root {
+    --bg1: #0b1426;
+    --bg2: #1a2540;
+    --text: #f3ead7;
+    --muted: #b9b09a;
+    --wood: #5a3a22;
+    --wood-dark: #3b2414;
+    --candle: #f1e7cf;
+    --candle-shade: #d8c9a6;
+    --green: #1f5a3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 70%, var(--bg2), var(--bg1) 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; overflow-x: hidden;
+  }
+  h1 { font-weight: normal; letter-spacing: .08em; margin: 0 0 4px; font-size: clamp(1.6rem, 5vw, 2.6rem); }
+  #status { font-size: clamp(1.05rem, 3vw, 1.4rem); margin: 0; }
+  #sub { color: var(--muted); font-size: .95rem; margin: 6px 0 0; min-height: 1.4em; text-align: center; }
+  svg { width: min(92vw, 760px); height: auto; margin-top: 8px; }
+  .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 1.3s infinite ease-in-out alternate; }
+  .flame.f2 { animation-duration: 1.7s; animation-delay: -.4s; }
+  .flame.f3 { animation-duration: 1.1s; animation-delay: -.8s; }
+  .flame.f4 { animation-duration: 1.5s; animation-delay: -.2s; }
+  .glow { animation: glow 2.2s infinite ease-in-out alternate; }
+  @keyframes flicker {
+    0%   { transform: scale(1, 1) rotate(-1.5deg); }
+    35%  { transform: scale(.94, 1.07) rotate(1.5deg); }
+    70%  { transform: scale(1.04, .95) rotate(-1deg); }
+    100% { transform: scale(.97, 1.05) rotate(1deg); }
+  }
+  @keyframes glow { from { opacity: .75; } to { opacity: 1; } }
+  .smoke { transform-box: fill-box; transform-origin: 50% 50%; animation: smoke 3.5s ease-out infinite; opacity: 0; }
+  @keyframes smoke {
+    0% { opacity: .55; transform: translateY(0) scale(.6); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.8); }
+  }
+  .hidden { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .flame, .glow, .smoke { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <h1>Adventsstake</h1>
+  <p id="status"></p>
+  <p id="sub"></p>
+
+  <svg id="stake" viewBox="0 0 760 460" role="img" aria-label="Adventsstake med fire lys">
+    <defs>
+      <linearGradient id="wax" x1="0" x2="1">
+        <stop offset="0" stop-color="var(--candle-shade)"/>
+        <stop offset=".45" stop-color="var(--candle)"/>
+        <stop offset="1" stop-color="var(--candle-shade)"/>
+      </linearGradient>
+      <linearGradient id="woodg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7a5232"/>
+        <stop offset="1" stop-color="var(--wood-dark)"/>
+      </linearGradient>
+      <radialGradient id="glowg">
+        <stop offset="0" stop-color="#ffb84a" stop-opacity=".55"/>
+        <stop offset="1" stop-color="#ffb84a" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="flameg" cx=".5" cy=".75" r=".6">
+        <stop offset="0" stop-color="#fff6c8"/>
+        <stop offset=".45" stop-color="#ffc13b"/>
+        <stop offset="1" stop-color="#ff7a1a"/>
+      </radialGradient>
+    </defs>
+
+    <!-- Stake / base -->
+    <rect x="50" y="385" width="660" height="34" rx="8" fill="url(#woodg)"/>
+    <rect x="70" y="419" width="620" height="12" rx="4" fill="var(--wood-dark)"/>
+    <!-- Greenery -->
+    <g id="greens" fill="var(--green)" stroke="#12402a" stroke-width="1"></g>
+    <!-- Berries -->
+    <g fill="#b3202a"><circle cx="150" cy="388" r="5"/><circle cx="330" cy="391" r="5"/><circle cx="455" cy="389" r="5"/><circle cx="615" cy="388" r="5"/><circle cx="395" cy="392" r="4"/></g>
+
+    <g id="candles"></g>
+  </svg>
+
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const CANDLE_X = [135, 290, 445, 600];      // midtpunkt for hvert lys
+  const BASE_Y = 385;                          // topp av stakeplaten
+  const FULL_H = 230, STUB_H = 34, W = 46;
+  const MONTHS = ["januar","februar","mars","april","mai","juni","juli","august","september","oktober","november","desember"];
+
+  // ?dato=2026-12-13T12:00 lar deg teste en annen dato/tid
+  function now() {
+    const p = new URLSearchParams(location.search).get("dato");
+    if (p) { const d = new Date(p); if (!isNaN(d)) return d; }
+    return new Date();
+  }
+
+  // 4. søndag i advent = siste søndag før 25. desember (altså søndag på/før 24.)
+  function adventDates(year) {
+    const eve = new Date(year, 11, 24);
+    const fourth = new Date(year, 11, 24 - eve.getDay()); // getDay(): søndag = 0
+    return [21, 14, 7, 0].map(off => new Date(fourth.getFullYear(), fourth.getMonth(), fourth.getDate() - off));
+  }
+  const fmt = d => d.getDate() + ". " + MONTHS[d.getMonth()];
+
+  function el(name, attrs, parent) {
+    const e = document.createElementNS(NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // Grønne kvister langs stakeplaten
+  (function greens() {
+    const g = document.getElementById("greens");
+    for (let x = 55; x <= 705; x += 14) {
+      const y = 386 + Math.sin(x * 0.37) * 3;
+      const r = 22 + (x * 7 % 9);
+      el("path", { d: `M${x} ${y} q ${-r*0.25} ${-r*0.8} ${-r*0.5} ${-r*0.9} q ${r*0.55} ${r*0.1} ${r*0.5} ${r*0.9} z`,
+                   transform: `rotate(${((x*13)%40)-20} ${x} ${y})` }, g);
+    }
+  })();
+
+  const t = now();
+  const year = t.getFullYear();
+  const adv = adventDates(year);
+  const ringIn = new Date(adv[3].getFullYear(), 11, 24, 17, 0, 0); // julen ringes inn kl. 17
+  const sundayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+
+  // Hvilke lys er tent?
+  let lit = adv.filter(d => t >= sundayStart(d)).length;      // 0–4
+  const christmas = t >= ringIn && t.getFullYear() === year;  // julen er ringt inn
+  // Når julen ringes inn brenner det første lyset (som har brent lengst) ut.
+  const burntOut = christmas ? [0] : [];
+
+  // Høyde på hvert lys: kortere jo lenger det har brent.
+  const heights = CANDLE_X.map((_, i) => {
+    const start = sundayStart(adv[i]);
+    if (t < start) return FULL_H;
+    const total = ringIn - start;                  // brenntid til jul
+    const frac = Math.min(1, Math.max(0, (t - start) / total));
+    return FULL_H - frac * (FULL_H - 70) ;
+  });
+  if (christmas) burntOut.forEach(i => heights[i] = STUB_H);
+
+  const cg = document.getElementById("candles");
+  CANDLE_X.forEach((cx, i) => {
+    const out = burntOut.includes(i);
+    const isLit = i < lit && !out;
+    const h = heights[i];
+    const top = BASE_Y - h;
+    const g = el("g", {}, cg);
+
+    // Holder
+    el("rect", { x: cx - 32, y: BASE_Y - 10, width: 64, height: 12, rx: 3, fill: "#8a8a8f" }, g);
+    el("rect", { x: cx - 24, y: BASE_Y - 16, width: 48, height: 8, rx: 3, fill: "#a5a5ab" }, g);
+
+    // Lys
+    el("rect", { x: cx - W/2, y: top, width: W, height: h - 12, rx: 3, fill: "url(#wax)" }, g);
+    el("ellipse", { cx, cy: top, rx: W/2, ry: 5, fill: "var(--candle)" }, g);
+    // Voksdrypp på lys som har brent
+    if (i < lit) {
+      el("path", { d: `M${cx - W/2 + 8} ${top} q 2 22 6 24 q 3 -2 2 -24 z`, fill: "#fffaf0", opacity: .85 }, g);
+    }
+    // Veke
+    el("line", { x1: cx, y1: top, x2: cx, y2: top - 12, stroke: "#222", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+
+    if (isLit) {
+      const fy = top - 12;
+      el("circle", { cx, cy: fy - 20, r: 95, fill: "url(#glowg)", class: "glow" }, g);
+      const f = el("g", { class: "flame f" + (i + 1) }, g);
+      el("path", { d: `M${cx} ${fy - 50} C ${cx + 18} ${fy - 28}, ${cx + 15} ${fy - 3}, ${cx} ${fy} C ${cx - 15} ${fy - 3}, ${cx - 18} ${fy - 28}, ${cx} ${fy - 50} Z`, fill: "url(#flameg)" }, f);
+      el("ellipse", { cx, cy: fy - 8, rx: 4.5, ry: 9, fill: "#5b8cff", opacity: .55 }, f);
+    } else if (out) {
+      // Utbrent lys: en liten røyktråd
+      [0, 1.2, 2.4].forEach(delay => {
+        const s = el("circle", { cx, cy: top - 14, r: 6, fill: "#cfcfcf", class: "smoke" }, g);
+        s.style.animationDelay = delay + "s";
+      });
+    }
+  });
+
+  // Tekst
+  const status = document.getElementById("status");
+  const sub = document.getElementById("sub");
+  const names = ["1.", "2.", "3.", "4."];
+
+  if (christmas) {
+    status.textContent = "God jul! 🎄";
+    sub.textContent = "Julen er ringt inn, og det første lyset har brent ut.";
+  } else if (lit === 0) {
+    status.textContent = "Advent har ikke begynt ennå";
+    const days = Math.ceil((sundayStart(adv[0]) - t) / 864e5);
+    sub.textContent = "1. søndag i advent er " + fmt(adv[0]) + " – om " + days + (days === 1 ? " dag." : " dager.");
+  } else {
+    status.textContent = names[lit - 1] + " søndag i advent – " + lit + (lit === 1 ? " lys brenner" : " lys brenner");
+    if (lit < 4) {
+      sub.textContent = "Neste lys tennes søndag " + fmt(adv[lit]) + ".";
+    } else {
+      sub.textContent = "Julen ringes inn 24. desember kl. 17.00 – da brenner det første lyset ut.";
+    }
+  }
+})();
+</script>
+</body>
+</html>
